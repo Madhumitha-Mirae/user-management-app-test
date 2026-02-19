@@ -1,0 +1,21 @@
+services:
+
+  backend:
+    image: madhut26/madhu-backend
+    container_name: backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://65.2.154.218:3306/madhudb
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+    restart: always
+
+  frontend:
+    image: madhut26/madhu-frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
