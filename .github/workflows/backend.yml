@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'user-backend/**'
-
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -24,7 +24,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }} ./backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }} ./user-backend
 
       - name: Push Docker Image
         run: |
@@ -37,4 +37,6 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/backend-deployment backend=${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }}
+          kubectl set image deployment/backend-deployment \
+          backend=${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }}
+

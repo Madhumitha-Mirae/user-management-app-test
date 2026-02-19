@@ -6,41 +6,37 @@ on:
       - main
     paths:
       - 'user-frontend/**'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build Docker image
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }} ./frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }} ./user-frontend
 
-      # Push Docker image
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }}
 
-      # Setup Kubeconfig
       - name: Setup Kubeconfig
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
           export KUBECONFIG=$PWD/kubeconfig
 
-      # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/frontend-deployment \
           frontend=${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }}
+
