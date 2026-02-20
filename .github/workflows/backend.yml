@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,14 +29,3 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }}
-
-      - name: Setup Kubeconfig
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl set image deployment/backend-deployment \
-          backend=${{ secrets.DOCKER_USERNAME }}/user-backend:${{ github.sha }}
-

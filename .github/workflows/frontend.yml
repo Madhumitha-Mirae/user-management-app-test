@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,19 +29,3 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }}
-
-      - name: Setup Kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Verify Cluster Connection
-        run: |
-          kubectl get nodes
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl set image deployment/frontend-deployment \
-          frontend=${{ secrets.DOCKER_USERNAME }}/user-frontend:${{ github.sha }}
-
