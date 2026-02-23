@@ -13,17 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # 1️⃣ Checkout Code
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2️⃣ SAST - Semgrep
       - name: Run Semgrep (SAST)
         uses: returntocorp/semgrep-action@v1
         with:
-          config: "p/owasp-top-ten"
+          config: "p/default"
 
-      # 3️⃣ Setup Node (required to install Snyk)
+      # 3️⃣ Setup Node (for Snyk)
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -34,24 +35,24 @@ jobs:
         run: npm install -g snyk
 
       # 5️⃣ SCA - Snyk
-      - name: Run Snyk
+      - name: Run Snyk Scan
         run: |
           cd user-backend
           snyk test --file=pom.xml --severity-threshold=high
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # 6️⃣ IaC - Trivy
+      # 6️⃣ IaC - Trivy Scan
       - name: Run Trivy IaC Scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
+          scan-type: fs
           scan-ref: './user-backend'
-          scanners: 'misconfig'
+          scanners: misconfig
 
       # 7️⃣ Docker Login
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -59,9 +60,17 @@ jobs:
       # 8️⃣ Build Docker Image
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/um-backend:latest ./user-backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/um-backend:${{ github.sha }} ./user-backend
 
       # 9️⃣ Push Docker Image
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/um-backend:${{ github.sha }}
+
+      # 🔟 Trivy Container Image Scan
+      - name: Scan Backend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/um-backend:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
