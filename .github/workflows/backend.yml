@@ -17,10 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
+      - name: Run Semgrep (Generate SARIF)
+        run: |
+          pip install semgrep
+          semgrep --config p/default --sarif --output semgrep-report.sarif
+
+      - name: Upload Semgrep Artifact
+        uses: actions/upload-artifact@v4
         with:
-          config: "p/default"
+          name: semgrep-report
+          path: semgrep-report.sarif
 
 # ===============================
 # 2️⃣ SCA - SNYK
@@ -42,8 +48,14 @@ jobs:
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
-      - name: Run Snyk Test
-        run: snyk test --all-projects || true
+      - name: Run Snyk Test (Generate JSON Report)
+        run: snyk test --all-projects --json-file-output=snyk-report.json || true
+
+      - name: Upload Snyk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-report
+          path: snyk-report.json
 
 # ===============================
 # 3️⃣ IaC SCAN - TRIVY
@@ -55,13 +67,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Trivy IaC Scan
-        uses: aquasecurity/trivy-action@master
+      - name: Run Trivy IaC Scan (Generate JSON)
+        run: |
+          docker run --rm -v $PWD:/project \
+            aquasec/trivy config --format json -o trivy-iac-report.json /project
+
+      - name: Upload Trivy IaC Artifact
+        uses: actions/upload-artifact@v4
         with:
-          scan-type: config
-          scan-ref: .
-          format: table
-          exit-code: 0
+          name: trivy-iac-report
+          path: trivy-iac-report.json
 
 # ===============================
 # 4️⃣ BUILD BACKEND IMAGE
@@ -73,9 +88,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -97,9 +110,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -120,16 +131,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Scan Backend Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
-          format: table
-          exit-code: 0
+      - name: Scan Backend Image (Generate JSON)
+        run: |
+          docker run --rm aquasec/trivy image \
+          --format json \
+          -o backend-image-report.json \
+          ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
 
-      - name: Scan Frontend Image
-        uses: aquasecurity/trivy-action@master
+      - name: Scan Frontend Image (Generate JSON)
+        run: |
+          docker run --rm aquasec/trivy image \
+          --format json \
+          -o frontend-image-report.json \
+          ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest
+
+      - name: Upload Backend Image Artifact
+        uses: actions/upload-artifact@v4
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest
-          format: table
-          exit-code: 0
+          name: backend-image-report
+          path: backend-image-report.json
+
+      - name: Upload Frontend Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image-report
+          path: frontend-image-report.json
