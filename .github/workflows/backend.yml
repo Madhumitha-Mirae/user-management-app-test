@@ -30,13 +30,12 @@ jobs:
       # -------------------------
       # 3️⃣ SCA - Snyk
       # -------------------------
-      - name: Run Snyk (Java)
-        run: |
-          cd user-backend
-          snyk auth $SNYK_TOKEN
-          snyk test --file=pom.xml --severity-threshold=high
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      -  name: Run Snyk
+         run: |
+            cd user-backend
+            snyk test --file=pom.xml --severity-threshold=high
+         env:
+            SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # -------------------------
       # 4️⃣ IaC Scan - Trivy
