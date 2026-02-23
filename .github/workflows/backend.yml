@@ -1,4 +1,4 @@
-name: Full Stack CI/CD
+name:  Devops
 
 on:
   push:
@@ -15,12 +15,14 @@ jobs:
 
     steps:
 
-      # 1️⃣ Checkout Code
+      # ===============================
+      # 1️⃣ Checkout Repository
+      # ===============================
       - name: Checkout Code
         uses: actions/checkout@v4
 
       # ===============================
-      # 🔐 SAST - Semgrep (Whole Repo)
+      # 2️⃣ SAST - Semgrep (Whole Repo)
       # ===============================
       - name: Run Semgrep (SAST)
         uses: returntocorp/semgrep-action@v1
@@ -28,7 +30,7 @@ jobs:
           config: "p/default"
 
       # ===============================
-      # 🟢 Setup Node (For Snyk + Frontend)
+      # 3️⃣ Setup Node (For Snyk + Frontend)
       # ===============================
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -36,35 +38,45 @@ jobs:
           node-version: 18
 
       # ===============================
-      # 🔎 Backend SCA - Snyk
+      # 4️⃣ Install Snyk CLI
       # ===============================
       - name: Install Snyk CLI
         run: npm install -g snyk
 
+      # ===============================
+      # 5️⃣ Backend SCA - Snyk
+      # ===============================
       - name: Run Snyk Scan (Backend)
+        working-directory: user-backend
         run: |
-          cd user-backend
-          snyk test --file=pom.xml --severity-threshold=high
+          snyk test \
+            --file=pom.xml \
+            --severity-threshold=high
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # ===============================
-      # 🔎 Frontend SCA - Snyk
+      # 6️⃣ Frontend Dependencies Install
       # ===============================
       - name: Install Frontend Dependencies
-        run: |
-          cd user-frontend
-          npm install
+        working-directory: user-frontend
+        run: npm install
 
+      # ===============================
+      # 7️⃣ Frontend SCA - Snyk (Production Only)
+      # ===============================
       - name: Run Snyk Scan (Frontend)
+        working-directory: user-frontend
         run: |
-          cd user-frontend
-          snyk test --severity-threshold=high
+          snyk test \
+            --file=package-lock.json \
+            --severity-threshold=high \
+            --dev=false
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # ===============================
-      # 🏗 IaC Scan (Both Folders)
+      # 8️⃣ IaC Scan - Backend
       # ===============================
       - name: Run Trivy IaC Scan (Backend)
         uses: aquasecurity/trivy-action@master
@@ -73,6 +85,9 @@ jobs:
           scan-ref: './user-backend'
           scanners: misconfig
 
+      # ===============================
+      # 9️⃣ IaC Scan - Frontend
+      # ===============================
       - name: Run Trivy IaC Scan (Frontend)
         uses: aquasecurity/trivy-action@master
         with:
@@ -81,7 +96,7 @@ jobs:
           scanners: misconfig
 
       # ===============================
-      # 🐳 Docker Login
+      # 🔟 Docker Login
       # ===============================
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -90,29 +105,33 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # ===============================
-      # 🐳 Build Backend Image (latest)
+      # 1️⃣1️⃣ Build Backend Image (latest)
       # ===============================
       - name: Build Backend Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/um-backend:latest ./user-backend
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/um-backend:latest \
+            ./user-backend
 
       - name: Push Backend Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
 
       # ===============================
-      # 🐳 Build Frontend Image (latest)
+      # 1️⃣2️⃣ Build Frontend Image (latest)
       # ===============================
       - name: Build Frontend Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest ./user-frontend
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest \
+            ./user-frontend
 
       - name: Push Frontend Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest
 
       # ===============================
-      # 🔎 Trivy Image Scan - Backend
+      # 1️⃣3️⃣ Trivy Image Scan - Backend
       # ===============================
       - name: Scan Backend Image
         uses: aquasecurity/trivy-action@master
@@ -122,7 +141,7 @@ jobs:
           exit-code: 1
 
       # ===============================
-      # 🔎 Trivy Image Scan - Frontend
+      # 1️⃣4️⃣ Trivy Image Scan - Frontend
       # ===============================
       - name: Scan Frontend Image
         uses: aquasecurity/trivy-action@master
