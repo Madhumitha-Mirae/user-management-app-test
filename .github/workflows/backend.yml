@@ -69,8 +69,12 @@ jobs:
 
       - name: Run Trivy IaC Scan (Generate JSON)
         run: |
-          docker run --rm -v $PWD:/project \
-            aquasec/trivy config --format json -o trivy-iac-report.json /project
+          docker run --rm \
+            -v $PWD:/project \
+            aquasec/trivy config \
+            --format json \
+            -o /project/trivy-iac-report.json \
+            /project
 
       - name: Upload Trivy IaC Artifact
         uses: actions/upload-artifact@v4
@@ -133,17 +137,21 @@ jobs:
     steps:
       - name: Scan Backend Image (Generate JSON)
         run: |
-          docker run --rm aquasec/trivy image \
-          --format json \
-          -o backend-image-report.json \
-          ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
+          docker run --rm \
+            -v $PWD:/project \
+            aquasec/trivy image \
+            --format json \
+            -o /project/backend-image-report.json \
+            ${{ secrets.DOCKER_USERNAME }}/um-backend:latest
 
       - name: Scan Frontend Image (Generate JSON)
         run: |
-          docker run --rm aquasec/trivy image \
-          --format json \
-          -o frontend-image-report.json \
-          ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest
+          docker run --rm \
+            -v $PWD:/project \
+            aquasec/trivy image \
+            --format json \
+            -o /project/frontend-image-report.json \
+            ${{ secrets.DOCKER_USERNAME }}/um-frontend:latest
 
       - name: Upload Backend Image Artifact
         uses: actions/upload-artifact@v4
